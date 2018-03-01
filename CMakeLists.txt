@@ -1,0 +1,16 @@
+cmake_minimum_required(VERSION 2.8)
+project(OpticalFlow)
+
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules)
+set(OpenCV_DIR /home/lshi/Application/Anaconda/envs/pytorch36/share/OpenCV/)
+message(${CMAKE_MODULE_PATH})
+find_package(OpenCV REQUIRED)
+message(${OpenCV_INCLUDE_DIRS})
+message(${OpenCV_LIBS})
+include_directories(${OpenCV_INCLUDE_DIRS})
+
+set(SOURCE_FILES main.cpp cal_optical_flow.cpp list_file.cpp)
+add_executable(OpticalFlow ${SOURCE_FILES})
+target_link_libraries(OpticalFlow ${OpenCV_LIBS})
+#target_link_libraries(OpticalFlow '/home/lshi/Application/Anaconda/envs/pytorch36/lib/*')
