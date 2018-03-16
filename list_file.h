@@ -24,5 +24,4 @@ using namespace std;
 vector<string> getFiles(string cate_dir);
 
 
-
 #endif //OPTICALFLOW_LIST_FILE_H
