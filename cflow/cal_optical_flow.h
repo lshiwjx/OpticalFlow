@@ -21,25 +21,22 @@
 using namespace std;
 using namespace cv;
 using namespace cv::cuda;
-void cal_flow_from_list(vector<string> dir_list, vector<string> flow_list, int step, int dev);
-void writeFlowImg(string name, const GpuMat& d_flow);
 
 void showGpuFlow(const char* name, const GpuMat& d_flow);
 
 void showCpuFlow(const char* name, const Mat& d_flow);
 
-void writeGpuFlow(const char* name, const GpuMat& d_flow);
+//calculate the optical flow from images given a dir list
+void cal_flow_from_dir_list(vector<string> dir_list, vector<string> flow_list, int step=1, int dev=0);
 
-void compute_and_save_ucf_flow(string root, string flow_root);
-
-void compute_and_save_twbn_flow(string root, string flow_root);
-
-void compute_and_save_dir_flow(string img_dir, string flow_dir, int step, int device_id);
+//calculate the optical flow from images given a dir
+void cal_flow_from_dir(string img_dir, string flow_dir, int step, int device_id);
 
 void compare_gpu_cpu_flow(string img1, string img2);
 
 void compare_flow_methods(string img1, string img2);
 
-void calcDenseFlowPureGPU(string video_path, string flow_dir, int step, int dev_id);
+// compute and save the optical flow image in a dir
+void cal_flow_gpu_from_video(string video_path, string flow_dir, int step = 1, int dev_id = 0, int type = 0, int bound = 10);
 
 #endif //OPTICALFLOW_CAL_OPTICAL_FLOW_H

@@ -77,6 +77,7 @@ Vec3b computeColor(float fx, float fy) {
     return pix;
 }
 
+// convert optical flow to image
 void drawOpticalFlow(const Mat_<float> &flowx, const Mat_<float> &flowy, Mat &dst, float maxmotion = -1) {
     dst.create(flowx.size(), CV_8UC3);
     dst.setTo(Scalar::all(0));
@@ -121,21 +122,6 @@ void showGpuFlow(const char *name, const GpuMat &d_flow) {
     imshow(name, out);
 }
 
-
-void writeFlowImg(string name, const GpuMat &d_flow) {
-    GpuMat planes[2];
-    cuda::split(d_flow, planes);
-
-    Mat flowx(planes[0]);
-    Mat flowy(planes[1]);
-
-    Mat out;
-    drawOpticalFlow(flowx, flowy, out, 10);
-
-    if (!imwrite(name, out))
-        cout << "wrong save";
-}
-
 void showCpuFlow(const char *name, const Mat &d_flow) {
     Mat planes[2];
     cv::split(d_flow, planes);
@@ -147,180 +133,6 @@ void showCpuFlow(const char *name, const Mat &d_flow) {
     drawOpticalFlow(flowx, flowy, out, 10);
 
     imshow(name, out);
-}
-
-void writeGpuFlow(const char *name, const GpuMat &d_flow) {
-    GpuMat planes[2];
-    cuda::split(d_flow, planes);
-
-    Mat flowx(planes[0]);
-    Mat flowy(planes[1]);
-
-    Mat out;
-    drawOpticalFlow(flowx, flowy, out, 10);
-
-    cv::imwrite(name, out);
-}
-
-
-void cal_flow_from_list(vector<string> dir_list, vector<string> flow_list, int step, int dev) {
-    Ptr<cuda::BroxOpticalFlow> flow = cuda::BroxOpticalFlow::create();
-    setDevice(dev);
-    string filename1, filename2;
-    Mat frame0, frame1, out, flow_x, flow_y;
-    GpuMat d_frame0, d_frame0f;
-    GpuMat d_frame1, d_frame1f;
-    GpuMat d_flow, planes[2];
-
-    for (int i = 0; i < dir_list.size(); ++i) {
-        int initial = 0;
-        const int64 start = getTickCount();
-        vector<string> imgs = getFiles(dir_list[i]);
-        for (int j = 0; j < imgs.size(); j = j + step) {
-            if (j < imgs.size() - step) {
-                string flow_name = flow_list[i] + "/" + imgs[j + step];
-                if ((access(flow_name.c_str(), 0)) != -1) {
-                    cout << flow_name << " has exists" << endl;
-                    continue;
-                }
-                if (initial == 0) {
-                    filename1 = dir_list[i] + "/" + imgs[j];
-                    frame0 = imread(filename1, IMREAD_GRAYSCALE);
-                    initial = 1;
-                } else {
-                    frame0 = frame1;
-                }
-
-                filename2 = dir_list[i] + "/" + imgs[j + step];
-                frame1 = imread(filename2, IMREAD_GRAYSCALE);
-
-                if (frame0.empty()) {
-                    cerr << "Can't open image [" << filename1 << "]" << endl;
-                    continue;
-                }
-                if (frame1.empty()) {
-                    cerr << "Can't open image [" << filename2 << "]" << endl;
-                    continue;
-                }
-
-                if (frame1.size() != frame0.size()) {
-                    cerr << "Images should be of equal sizes" << endl;
-                    continue;
-                }
-
-                d_frame0.upload(frame0);
-                d_frame1.upload(frame1);
-
-                d_flow.create(frame0.size(), CV_32FC2);
-                d_frame0.convertTo(d_frame0f, CV_32F, 1.0 / 255.0);
-                d_frame1.convertTo(d_frame1f, CV_32F, 1.0 / 255.0);
-                flow->calc(d_frame0f, d_frame1f, d_flow);
-
-                cuda::split(d_flow, planes);
-
-                planes[0].download(flow_x);
-                planes[1].download(flow_y);
-
-                drawOpticalFlow(flow_x, flow_y, out, 10);
-
-                if (!imwrite(flow_name, out))
-                    cout << "wrong save";
-            }
-        }
-
-        const double timeSec = (getTickCount() - start) / getTickFrequency();
-        cout << dir_list[i] << " : " << timeSec << " sec " << i << "/" << dir_list.size() << endl;
-
-    }
-}
-
-
-void compute_and_save_dir_flow(string img_dir, string flow_dir, int step = 1, int device_id = 0) {
-    vector<string> jpgs = getFiles(img_dir);
-    string filename1, filename2;
-//    int flag = 0;
-//    for (int i = 0; i < jpgs.size(); i = i + step) {
-//        if (i < jpgs.size() - step) {
-//            string flow_name = flow_dir + "/" + jpgs[i + step];
-//            if ((access(flow_name.c_str(), 0)) != -1) {
-//                cout << flow_name << " has exists" << endl;
-//                continue;
-//            } else{
-//                flag=1;
-//                break;
-//            }
-//        }
-//    }
-//    if(flag==0) {
-//        cout << img_dir << " reture" <<endl;
-//        return;
-//    }
-    cuda::setDevice(device_id);
-    cout << "create" << endl;
-    Ptr<cuda::OpticalFlowDual_TVL1> tvl1 = cuda::OpticalFlowDual_TVL1::create();
-    Mat frame0, frame1, flow_x, flow_y, out;
-    GpuMat d_frame0, d_frame1, planes[2], d_flow;
-    bool initial = 0;
-    for (int j = 0; j < jpgs.size(); j = j + step) {
-        if (j < jpgs.size() - step) {
-            string flow_name = flow_dir + "/" + jpgs[j + step];
-            if ((access(flow_name.c_str(), 0)) != -1) {
-                cout << flow_name << " has exists" << endl;
-                continue;
-            }
-            if (initial == 0) {
-                filename1 = img_dir + "/" + jpgs[j];
-                frame0 = imread(filename1, IMREAD_GRAYSCALE);
-                initial = 1;
-            } else {
-                frame0 = frame1;
-            }
-            filename2 = img_dir + "/" + jpgs[j + step];
-            frame1 = imread(filename2, IMREAD_GRAYSCALE);
-
-            if (frame0.empty()) {
-                cerr << "Can't open image [" << filename1 << "]" << endl;
-                continue;
-            }
-            if (frame1.empty()) {
-                cerr << "Can't open image [" << filename2 << "]" << endl;
-                continue;
-            }
-
-            if (frame1.size() != frame0.size()) {
-                cerr << "Images should be of equal sizes" << endl;
-                continue;
-            }
-
-            d_frame0.upload(frame0);
-            d_frame1.upload(frame1);
-
-//            GpuMat d_flow(frame0.size(), CV_32FC2);
-            d_flow.create(frame0.size(), CV_32FC2);
-            const int64 start = getTickCount();
-            tvl1->calc(d_frame0, d_frame1, d_flow);
-
-//            GpuMat planes[2];
-            cuda::split(d_flow, planes);
-
-//            Mat flowx(planes[0]);
-//            Mat flowy(planes[1]);
-            planes[0].download(flow_x);
-            planes[1].download(flow_y);
-
-//            Mat out;
-            drawOpticalFlow(flow_x, flow_y, out, 10);
-
-            if (!imwrite(flow_name, out))
-                cout << "wrong save";
-
-//            writeFlowImg(flow_name, d_flow);
-            const double timeSec = (getTickCount() - start) / getTickFrequency();
-            cout << flow_name << " : " << timeSec << " sec" << endl;
-        }
-
-
-    }
 }
 
 
@@ -422,7 +234,8 @@ void compare_flow_methods(string img1, string img2) {
 }
 
 
-void calcDenseFlowPureGPU(string video_path, string flow_dir, int step = 1, int dev_id = 0) {
+void
+cal_flow_gpu_from_video(string video_path, string flow_dir, int step, int dev_id, int type, int bound) {
 
     setDevice(dev_id);
     cv::Ptr<cudacodec::VideoReader> video_stream = cudacodec::createVideoReader(video_path);
@@ -433,12 +246,29 @@ void calcDenseFlowPureGPU(string video_path, string flow_dir, int step = 1, int 
     GpuMat d_frame1f;
     GpuMat d_flow;
 
-    cv::Ptr<cuda::BroxOpticalFlow> alg_tvl1 = cuda::BroxOpticalFlow::create();
+    cv::Ptr<cuda::OpticalFlowDual_TVL1> alg_tvl1 = cuda::OpticalFlowDual_TVL1::create();
+    cv::Ptr<cuda::BroxOpticalFlow> alg_brox = cuda::BroxOpticalFlow::create();
+    cv::Ptr<cuda::FarnebackOpticalFlow> alg_far = cuda::FarnebackOpticalFlow::create();
+    cv::Ptr<cuda::DensePyrLKOpticalFlow> alg_dense = cuda::DensePyrLKOpticalFlow::create();
+
+    if (type == 0) {
+        cv::Ptr<cuda::OpticalFlowDual_TVL1> alg = cuda::OpticalFlowDual_TVL1::create();
+    } else if (type == 1) {
+        cv::Ptr<cuda::BroxOpticalFlow> alg = cuda::BroxOpticalFlow::create();
+    } else if (type == 2) {
+        cv::Ptr<cuda::FarnebackOpticalFlow> alg = cuda::FarnebackOpticalFlow::create();
+    } else if (type == 3) {
+        cv::Ptr<cuda::DensePyrLKOpticalFlow> alg = cuda::DensePyrLKOpticalFlow::create();
+    } else {
+        cv::Ptr<cuda::OpticalFlowDual_TVL1> alg = cuda::OpticalFlowDual_TVL1::create();
+    }
+
+
     bool initialized = false;
     int num_name = 1;
     string flow_name;
     while (true) {
-        const int64 start = getTickCount();
+//        const int64 start = getTickCount();
 
         //build mats for the first frame
         if (!initialized) {
@@ -463,7 +293,19 @@ void calcDenseFlowPureGPU(string video_path, string flow_dir, int step = 1, int 
             cuda::cvtColor(capture_image, capture_gray, CV_BGRA2GRAY);
             prev_gray.convertTo(d_frame0f, CV_32F, 1.0 / 255.0);
             capture_gray.convertTo(d_frame1f, CV_32F, 1.0 / 255.0);
-            alg_tvl1->calc(d_frame0f, d_frame1f, d_flow);
+
+            if (type == 0) {
+                alg_tvl1->calc(d_frame0f, d_frame1f, d_flow);
+            } else if (type == 1) {
+                alg_brox->calc(d_frame0f, d_frame1f, d_flow);
+            } else if (type == 2) {
+                alg_far->calc(d_frame0f, d_frame1f, d_flow);
+            } else if (type == 3) {
+                alg_dense->calc(d_frame0f, d_frame1f, d_flow);
+            } else {
+                alg_tvl1->calc(d_frame0f, d_frame1f, d_flow);
+            }
+//            alg->calc(d_frame0f, d_frame1f, d_flow);
 
             for (int s = 0; s < step - 1; ++s) {
                 if (!video_stream->nextFrame(capture_frame))
@@ -471,6 +313,7 @@ void calcDenseFlowPureGPU(string video_path, string flow_dir, int step = 1, int 
             }
             if (!video_stream->nextFrame(capture_frame))
                 break;
+
             num_name += step;
             std::stringstream ss;
             ss << std::setw(5) << std::setfill('0') << num_name;
@@ -481,7 +324,9 @@ void calcDenseFlowPureGPU(string video_path, string flow_dir, int step = 1, int 
             //get back flow map
             planes[0].download(flow_x);
             planes[1].download(flow_y);
-            drawOpticalFlow(flow_x, flow_y, out, 10);
+
+            // turn to img
+            drawOpticalFlow(flow_x, flow_y, out, bound);
 
             if (!imwrite(flow_name, out))
                 cout << "wrong save";
@@ -489,7 +334,166 @@ void calcDenseFlowPureGPU(string video_path, string flow_dir, int step = 1, int 
             std::swap(prev_gray, capture_gray);
             std::swap(prev_image, capture_image);
         }
-        const double timeSec = (getTickCount() - start) / getTickFrequency();
+//        const double timeSec = (getTickCount() - start) / getTickFrequency();
 //        cout<<flow_name<<" : "<<timeSec<<" sec"<<endl;
+    }
+}
+
+void cal_flow_from_dir_list(vector<string> dir_list, vector<string> flow_list, int step, int dev) {
+    Ptr<cuda::BroxOpticalFlow> flow = cuda::BroxOpticalFlow::create();
+    setDevice(dev);
+    string filename1, filename2;
+    Mat frame0, frame1, out, flow_x, flow_y;
+    GpuMat d_frame0, d_frame0f;
+    GpuMat d_frame1, d_frame1f;
+    GpuMat d_flow, planes[2];
+
+    for (int i = 0; i < dir_list.size(); ++i) {
+        int initial = 0;
+        const int64 start = getTickCount();
+        vector<string> imgs = getFiles(dir_list[i]);
+        for (int j = 0; j < imgs.size(); j = j + step) {
+            if (j < imgs.size() - step) {
+                string flow_name = flow_list[i] + "/" + imgs[j + step];
+                if ((access(flow_name.c_str(), 0)) != -1) {
+                    cout << flow_name << " has exists" << endl;
+                    continue;
+                }
+                if (initial == 0) {
+                    filename1 = dir_list[i] + "/" + imgs[j];
+                    frame0 = imread(filename1, IMREAD_GRAYSCALE);
+                    initial = 1;
+                } else {
+                    frame0 = frame1;
+                }
+
+                filename2 = dir_list[i] + "/" + imgs[j + step];
+                frame1 = imread(filename2, IMREAD_GRAYSCALE);
+
+                if (frame0.empty()) {
+                    cerr << "Can't open image [" << filename1 << "]" << endl;
+                    continue;
+                }
+                if (frame1.empty()) {
+                    cerr << "Can't open image [" << filename2 << "]" << endl;
+                    continue;
+                }
+
+                if (frame1.size() != frame0.size()) {
+                    cerr << "Images should be of equal sizes" << endl;
+                    continue;
+                }
+
+                d_frame0.upload(frame0);
+                d_frame1.upload(frame1);
+
+                d_flow.create(frame0.size(), CV_32FC2);
+                d_frame0.convertTo(d_frame0f, CV_32F, 1.0 / 255.0);
+                d_frame1.convertTo(d_frame1f, CV_32F, 1.0 / 255.0);
+                flow->calc(d_frame0f, d_frame1f, d_flow);
+
+                cuda::split(d_flow, planes);
+
+                planes[0].download(flow_x);
+                planes[1].download(flow_y);
+
+                drawOpticalFlow(flow_x, flow_y, out, 10);
+
+                if (!imwrite(flow_name, out))
+                    cout << "wrong save";
+            }
+        }
+
+        const double timeSec = (getTickCount() - start) / getTickFrequency();
+        cout << dir_list[i] << " : " << timeSec << " sec " << i << "/" << dir_list.size() << endl;
+
+    }
+}
+
+void cal_flow_from_dir(string img_dir, string flow_dir, int step, int device_id) {
+    vector<string> jpgs = getFiles(img_dir);
+    string filename1, filename2;
+    /*int flag = 0;
+    for (int i = 0; i < jpgs.size(); i = i + step) {
+        if (i < jpgs.size() - step) {
+            string flow_name = flow_dir + "/" + jpgs[i + step];
+            if ((access(flow_name.c_str(), 0)) != -1) {
+                cout << flow_name << " has exists" << endl;
+                continue;
+            } else{
+                flag=1;
+                break;
+            }
+        }
+    }
+    if(flag==0) {
+        cout << img_dir << " reture" <<endl;
+        return;
+    }*/
+    cuda::setDevice(device_id);
+    cout << "create" << endl;
+    Ptr<cuda::OpticalFlowDual_TVL1> tvl1 = cuda::OpticalFlowDual_TVL1::create();
+    Mat frame0, frame1, flow_x, flow_y, out;
+    GpuMat d_frame0, d_frame1, planes[2], d_flow;
+    bool initial = 0;
+    for (int j = 0; j < jpgs.size(); j = j + step) {
+        if (j < jpgs.size() - step) {
+            string flow_name = flow_dir + "/" + jpgs[j + step];
+            if ((access(flow_name.c_str(), 0)) != -1) {
+                cout << flow_name << " has exists" << endl;
+                continue;
+            }
+            if (initial == 0) {
+                filename1 = img_dir + "/" + jpgs[j];
+                frame0 = imread(filename1, IMREAD_GRAYSCALE);
+                initial = 1;
+            } else {
+                frame0 = frame1;
+            }
+            filename2 = img_dir + "/" + jpgs[j + step];
+            frame1 = imread(filename2, IMREAD_GRAYSCALE);
+
+            if (frame0.empty()) {
+                cerr << "Can't open image [" << filename1 << "]" << endl;
+                continue;
+            }
+            if (frame1.empty()) {
+                cerr << "Can't open image [" << filename2 << "]" << endl;
+                continue;
+            }
+
+            if (frame1.size() != frame0.size()) {
+                cerr << "Images should be of equal sizes" << endl;
+                continue;
+            }
+
+            d_frame0.upload(frame0);
+            d_frame1.upload(frame1);
+
+//            GpuMat d_flow(frame0.size(), CV_32FC2);
+            d_flow.create(frame0.size(), CV_32FC2);
+            const int64 start = getTickCount();
+            tvl1->calc(d_frame0, d_frame1, d_flow);
+
+//            GpuMat planes[2];
+            cuda::split(d_flow, planes);
+
+//            Mat flowx(planes[0]);
+//            Mat flowy(planes[1]);
+            planes[0].download(flow_x);
+            planes[1].download(flow_y);
+
+//            Mat out;
+            drawOpticalFlow(flow_x, flow_y, out, 10);
+
+            if (!imwrite(flow_name, out))
+                cout << "wrong save";
+
+//            writeFlowImg(flow_name, d_flow);
+            const double timeSec = (getTickCount() - start) / getTickFrequency();
+            cout << flow_name << " : " << timeSec << " sec" << endl;
+        }
+
+
     }
 }

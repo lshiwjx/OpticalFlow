@@ -5,8 +5,8 @@ from pipes import quote
 from multiprocessing import Pool, current_process
 from tqdm import tqdm
 
-tool_path = '/home/lshi/Project/C++/OpticalFlow/build/calOpticalFlowFromImg'
-video_tool_path = '/home/lshi/Project/C++/OpticalFlow/build/calOpticalFlowFromVideo'
+tool_path = '../cflow/calOpticalFlowFromImg'
+video_tool_path = '../cflow/calOpticalFlowFromVideo'
 step = 2
 device = [0,1,2,3,4,6,7]
 
@@ -133,4 +133,3 @@ def jester():
     pool.starmap(tvl_flow, zip(img_paths_mul, flow_paths_mul))
 
 
-ucf_video()

@@ -2,7 +2,7 @@ import cv2
 import os
 import time
 import numpy as np
-import utility.flow as fl
+import flow as fl
 
 os.environ['DISPLAY'] = 'localhost:11.0'
 from multiprocessing import Pool
@@ -37,8 +37,8 @@ def dense_flow_ucf(cls, root, target):
 
 
 def compare_flow():
-    img1_path = "/home/lshi/Database/UCF101/img/ApplyEyeMakeup/v_ApplyEyeMakeup_g01_c01/00001.jpg"
-    img2_path = "/home/lshi/Database/UCF101/img/ApplyEyeMakeup/v_ApplyEyeMakeup_g01_c01/00005.jpg"
+    img1_path = "../data/00001.jpg"
+    img2_path = "../data/00005.jpg"
     tv1 = cv2.optflow.createOptFlow_PCAFlow()
     df = cv2.optflow.op()
     dis = cv2.optflow.createOptFlow_DIS()
@@ -69,7 +69,6 @@ def compare_flow():
     fl.visualize_flow(flow3)
     fl.visualize_flow(flow4)
     pass
-
 
 
 def tvl_flow_ucf(p):

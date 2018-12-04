@@ -108,7 +108,7 @@ int main(int argc, const char *argv[]) {
             lastf = flow_list.end();
         vector<string> flows(firstf, lastf);
         int d = k % num_g;
-        t[k] = thread(cal_flow_from_list, imgs, flows, step, k);
+        t[k] = thread(cal_flow_from_dir_list, imgs, flows, step, k);
 
         //thread_guard g(t[k]);
     }
