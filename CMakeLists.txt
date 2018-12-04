@@ -7,8 +7,14 @@ set(OpenCV_DIR /home/lshi/Application/Anaconda/share/OpenCV/)
 message(${CMAKE_MODULE_PATH})
 find_package(OpenCV REQUIRED)
 message(${OpenCV_INCLUDE_DIRS})
+#message(${OpenCV*})
 message(${OpenCV_LIBS})
 include_directories(${OpenCV_INCLUDE_DIRS})
+include_directories(
+        "/home/lshi/Application/Anaconda/envs/pytorch/lib/python3.6/site-packages/torch/lib/include"
+        "/usr/local/cuda/include"
+        "./"
+)
 
 set(SOURCE_FILES_VIDEO cal_optical_flow_from_video.cpp cal_optical_flow.cpp list_file.cpp)
 set(SOURCE_FILES_IMG cal_optical_flow_from_img.cpp cal_optical_flow.cpp list_file.cpp mkdir.cpp mkdir.h)
