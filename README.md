@@ -1,4 +1,4 @@
-# Calculate OpticalFlow with (multi)CPU/GPU
+# Calculate OpticalFlow with (multi)CPU/GPU based on image/video
 /cflow is the C++ realization of the algorithm. \
 /pyflow is a python warper\
 Directly decoding from video can save much IO time. 
@@ -10,9 +10,14 @@ Opencv >= 3.0 with GPU Support and Contrib installed
 mkdir build\
 cd build\
 cmake ..\
-make\
+make
 
-Their will be three executable files in bin/
+
+Their will be three executable files in bin/ \
+./calOpticalFlowFromVideo -i=../data/v_ApplyEyeMakeup_g01_c01.avi
+ -f=../out/ -s=1 -d=0 -t=1
+
+Or use python warper showed in pyflow/
 
 ## Comparison
 Original images: \

@@ -19,7 +19,7 @@ int main(int argc, const char *argv[]) {
     string video = "../data/v_ApplyEyeMakeup_g01_c01.avi";
     string out = "../out/";
 
-//    cal_flow_gpu_from_video(video, out);
+    cal_flow_gpu_from_video(video, out);
     compare_gpu_cpu_flow(img1, img2);
     compare_flow_methods(img1, img2);
     return 0;

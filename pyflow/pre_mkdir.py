@@ -1,7 +1,7 @@
 import os
 
-root = '/home/lshi/Database/UCF101'
-root2 = '/home/lshi/Database/UCF101FlowTVL'
+root = '/home/xxx/Database/UCF101'
+root2 = '/home/xxx/Database/UCF101FlowTVL'
 dirs = os.listdir(root)
 for d in dirs:
     clips = os.listdir(os.path.join(root,d))

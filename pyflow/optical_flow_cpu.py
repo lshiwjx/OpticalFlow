@@ -47,17 +47,14 @@ def compare_flow():
     img2 = cv2.imread(img2_path, cv2.IMREAD_GRAYSCALE)
     start = time.time()
     flow1 = df.calc(img1, img2, None)
-    # fl.visualize_flow(flow)
     print(time.time() - start)
 
     start = time.time()
     flow2 = dis.calc(img1, img2, None)
-    # fl.visualize_flow(flow)
     print(time.time() - start)
 
     start = time.time()
     flow3 = far.calc(img1, img2, None)
-    # fl3.visualize_flow(flow)
     print(time.time() - start)
 
     start = time.time()

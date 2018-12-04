@@ -29,7 +29,7 @@ void showCpuFlow(const char* name, const Mat& d_flow);
 //calculate the optical flow from images given a dir list
 void cal_flow_from_dir_list(vector<string> dir_list, vector<string> flow_list, int step=1, int dev=0);
 
-//calculate the optical flow from images given a dir
+//calculate the optical flow from images in a given dir
 void cal_flow_from_dir(string img_dir, string flow_dir, int step, int device_id);
 
 void compare_gpu_cpu_flow(string img1, string img2);
